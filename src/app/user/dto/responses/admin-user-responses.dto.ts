@@ -5,18 +5,15 @@ export default class UserAdminResponseDto {
     this.id = data.id;
     this.firstName = data.firstName;
     this.lastName = data.lastName;
-    this.phoneNumber = data.phoneNumber;
     this.avatar = data.avatar;
     this.email = data.email;
-    this.last_login = data.last_login;
+    this.is_verified = data.is_verified;
   }
 
   id: number;
-  file: string;
   firstName: string;
   lastName: string;
-  phoneNumber: string;
   avatar: string;
   email: string;
-  last_login: Date;
+  is_verified: boolean;
 }

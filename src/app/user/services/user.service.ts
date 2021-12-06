@@ -51,10 +51,6 @@ export class UserService extends BusinessService<User> {
     return await this.userRepository.save(user);
   }
 
-  async save(user: User): Promise<User> {
-    return await this.userRepository.save(user);
-  }
-
   async update(contact: User) {
     return await this.userRepository.update(contact.id, contact);
   }

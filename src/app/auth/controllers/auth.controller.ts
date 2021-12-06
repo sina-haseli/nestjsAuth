@@ -1,29 +1,18 @@
-import {
-  Body,
-  Get,
-  Param,
-  Post,
-  Req,
-  UseGuards,
-  UsePipes,
-  ValidationPipe,
-} from '@nestjs/common';
-import { AuthService } from '../services/auth.service';
-import { User } from '../../user/entities/user.entity';
-import { BusinessController } from '../../common/decorator/business-controller.decorator';
-import { ResponseCode } from '../../common/interfaces/responsecode.interface';
-import { ResponseError, ResponseSuccess } from '../../common/dto/response.dto';
-import { UserService } from '../../user/services/user.service';
-import { AuthGuard } from '@nestjs/passport';
-import { CreateUser } from '../../user/dto/requests/create-user.dto';
+import {Body, Get, Param, Post, Req, UseGuards, UsePipes, ValidationPipe,} from '@nestjs/common';
+import {AuthService} from '../services/auth.service';
+import {User} from '../../user/entities/user.entity';
+import {BusinessController} from '../../common/decorator/business-controller.decorator';
+import {ResponseCode} from '../../common/interfaces/responsecode.interface';
+import {ResponseError, ResponseSuccess} from '../../common/dto/response.dto';
+import {AuthGuard} from '@nestjs/passport';
+import {CreateUser} from '../../user/dto/requests/create-user.dto';
 import * as bcrypt from 'bcrypt';
-import { ManagementClient } from 'auth0';
+import {ManagementClient} from 'auth0';
 
 @BusinessController('/auth', 'Authentication')
 export class AuthController {
   constructor(
     private authService: AuthService,
-    private usersService: UserService,
   ) {}
 
   // @HttpCode(200)
@@ -68,24 +57,22 @@ export class AuthController {
       scope: 'read:users update:users',
     });
 
-    const response = await authZero
-      .getUser({ id: req.user.sub }) // 4
-      .then((user: User) => {
-        return user;
-      })
-      .catch((err) => {
-        return err;
-      });
-
-    return response;
+    return await authZero
+        .getUser({id: req.user.sub}) // 4
+        .then((user: User) => {
+          return user;
+        })
+        .catch((err) => {
+          return err;
+        });
   }
 
   @UseGuards(AuthGuard('local'))
   @Post('login')
   async login(@Req() req) {
-    const user = await this.usersService.findById(req.user.id);
+    const user = await this.authService.findById(req.user.id);
     user.updated_time = new Date();
-    await this.usersService.save(user);
+    await this.authService.save(user, null);
     const data = await this.authService.login(req.user);
     return new ResponseSuccess(ResponseCode.RESULT_SUCCESS, data);
   }
@@ -96,7 +83,7 @@ export class AuthController {
     const entity = Object.assign(new User(), userData);
 
     // check user exist
-    const isUserExists = await this.usersService.checkUserExists(entity.email);
+    const isUserExists = await this.authService.checkUserExists(entity.email);
     if (isUserExists) {
       return new ResponseError(
         ResponseCode.RESULT_USER_EXISTS,
@@ -106,7 +93,7 @@ export class AuthController {
 
     // create a new user
     try {
-      const user = await this.usersService.create(entity);
+      const user = await this.authService.create(entity);
       const token = await this.authService.createEmailToken(user.email);
       const sent = await this.authService.sendVerifyEmail(user.email, token);
 
@@ -134,7 +121,7 @@ export class AuthController {
   @Get('email/resend-verification')
   async sendEmailVerification(@Req() req) {
     try {
-      const user = await this.usersService.findById(req.user.id);
+      const user = await this.authService.findById(req.user.id);
       const token = await this.authService.recreateEmailToken(user);
       if (token < 0) {
         return new ResponseError(
@@ -194,7 +181,7 @@ export class AuthController {
         bcrypt.genSaltSync(8),
         null,
       );
-      await this.usersService.update(user);
+      await this.authService.update(user);
       // send email the new password
       const isEmailSent = await this.authService.emailResetedPassword(
         user.email,

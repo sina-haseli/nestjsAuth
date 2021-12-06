@@ -21,7 +21,7 @@ export class UserController {
 
   @Post('')
   async create(@Body() createUserDto: CreateUser, @GetUser() user: User) {
-    return await this.userService.create(createUserDto, user);
+    return await this.userService.save(createUserDto, user);
   }
 
   @Patch(':id')
@@ -30,7 +30,7 @@ export class UserController {
     @Body() updateUserDto: UpdateUserDto,
     @GetUser() user: User,
   ) {
-    await this.userService.update(id, updateUserDto, user);
+    await this.userService.updateById(id, updateUserDto, user);
     return new CommonUpdateResponseDto({ isUpdated: true });
   }
 

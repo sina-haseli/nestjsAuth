@@ -91,18 +91,18 @@
 //     return this.findOne(user.id, 'role');
 //   }
 // }
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
-import { UserService } from '../../user/services/user.service';
+import {Injectable, HttpException, HttpStatus} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { EmailVerification } from '../entities/emailverification.entity';
-import { Repository, UpdateResult } from 'typeorm';
+import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-
 import * as nodemailer from 'nodemailer';
 import * as smtpTransport from 'nodemailer-smtp-transport';
 import { ForgotPassword } from '../entities/forgottenpassword.entity';
 import { User } from '../../user/entities/user.entity';
+import {BusinessService} from "../../base/business.service";
+import {UserRepository} from "../../user/repositories/user.repository";
 const {
   SMTP_HOST,
   SMTP_PORT,
@@ -113,18 +113,18 @@ const {
 } = process.env;
 
 @Injectable()
-export class AuthService {
+export class AuthService extends BusinessService<User> {
   transport;
 
   constructor(
-    private readonly usersService: UserService,
     private readonly jwtService: JwtService,
     @InjectRepository(ForgotPassword)
     private readonly forgotPasswordRepository: Repository<ForgotPassword>,
-
+    private usersService: UserRepository,
     @InjectRepository(EmailVerification)
     private readonly emailVerificationRepository: Repository<EmailVerification>,
   ) {
+    super(usersService);
     this.transport = nodemailer.createTransport(
       smtpTransport({
         host: SMTP_HOST,
@@ -136,6 +136,45 @@ export class AuthService {
         },
       }),
     );
+  }
+
+  async getOneOrFail(id: number) {
+    const user = await this.getOne(id);
+    this.checkNotFound(user);
+    return user;
+  }
+
+  async getOne(id: number) {
+    return this.usersService.getOne(id);
+  }
+
+  async checkUserExists(email: string): Promise<boolean> {
+    const user = await this.usersService.findOne({ where: { email: email } });
+    return user !== undefined;
+  }
+
+  async findByEmail(email: string): Promise<User> {
+    return await this.usersService.findOne({
+      where: {
+        email: email,
+      },
+    });
+  }
+
+  async findById(id: number): Promise<User> {
+    return await this.usersService.findOne({
+      where: {
+        id: id,
+      },
+    });
+  }
+
+  async create(user: User): Promise<User> {
+    return await this.usersService.save(user);
+  }
+
+  async update(contact: User) {
+    return await this.usersService.update(contact.id, contact);
   }
 
   async googleLogin(req) {
@@ -150,7 +189,7 @@ export class AuthService {
   }
 
   async validateUser(email: string, password: string): Promise<any> {
-    const user = await this.usersService.findByEmail(email);
+    const user = await this.findByEmail(email);
     if (user && bcrypt.compareSync(password, user.password)) {
       const { password, ...result } = user;
       return result;
@@ -159,7 +198,7 @@ export class AuthService {
   }
 
   async createEmailToken(email: string): Promise<number> {
-    const user = await this.usersService.findByEmail(email);
+    const user = await this.findByEmail(email);
     const emailVerification = new EmailVerification();
     emailVerification.user = user;
     emailVerification.token = Math.floor(Math.random() * 9000000) + 1000000;
@@ -232,12 +271,12 @@ export class AuthService {
       where: { token: token },
     });
     if (emailVerification && emailVerification.email) {
-      const userData = await this.usersService.findByEmail(
+      const userData = await this.findByEmail(
         emailVerification.email,
       );
       if (userData) {
         userData.is_verified = true;
-        const savedUser = await this.usersService.save(userData);
+        const savedUser = await this.usersService.save(userData, null);
         await this.emailVerificationRepository.delete({ token: token });
         console.log(!!savedUser, !!savedUser.is_verified);
         return !!savedUser;
@@ -252,7 +291,7 @@ export class AuthService {
   }
 
   async createForgottenPasswordToken(email: string): Promise<ForgotPassword> {
-    const userData = await this.usersService.findByEmail(email);
+    const userData = await this.findByEmail(email);
     let forgotPassword = await this.forgotPasswordRepository.findOne({
       user: userData,
     });
@@ -287,7 +326,7 @@ export class AuthService {
   }
 
   async sendEmailForgotPassword(email: string): Promise<boolean> {
-    const userData = await this.usersService.findByEmail(email);
+    const userData = await this.findByEmail(email);
     if (!userData)
       throw new HttpException('LOGIN.USER_NOT_FOUND', HttpStatus.NOT_FOUND);
 

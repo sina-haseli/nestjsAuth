@@ -13,6 +13,15 @@ export class User {
   @ApiHideProperty()
   email: string;
 
+  @Column({ nullable: true })
+  firstName: string;
+
+  @Column({ nullable: true })
+  lastName: string;
+
+  @Column({ nullable: true })
+  avatar: string;
+
   @BeforeInsert()
   hashPassword() {
     this.password = bcrypt.hashSync(this.password, bcrypt.genSaltSync(8), null);
