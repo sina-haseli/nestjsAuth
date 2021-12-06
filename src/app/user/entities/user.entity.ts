@@ -38,4 +38,10 @@ export class User {
 
   @Column({ default: false })
   is_verified: boolean;
+
+  @Column({ nullable: true })
+  twoFactorAuthenticationSecret?: string;
+
+  @Column({ default: false })
+  isTwoFactorAuthenticationEnabled: boolean;
 }

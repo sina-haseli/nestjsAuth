@@ -54,4 +54,10 @@ export class UserService extends BusinessService<User> {
   async update(contact: User) {
     return await this.userRepository.update(contact.id, contact);
   }
+
+  async setTwoFactorAuthenticationSecret(secret: string, userId: number) {
+    return this.userRepository.update(userId, {
+      twoFactorAuthenticationSecret: secret
+    });
+  }
 }

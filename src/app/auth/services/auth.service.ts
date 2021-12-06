@@ -138,6 +138,12 @@ export class AuthService extends BusinessService<User> {
     );
   }
 
+  async turnOnTwoFactorAuthentication(userId: number) {
+    return this.usersService.update(userId, {
+      isTwoFactorAuthenticationEnabled: true
+    });
+  }
+
   async getOneOrFail(id: number) {
     const user = await this.getOne(id);
     this.checkNotFound(user);
@@ -451,5 +457,14 @@ export class AuthService extends BusinessService<User> {
     } catch (error) {
       return false;
     }
+  }
+
+  getCookieWithJwtAccessToken(userId: number, isSecondFactorAuthenticated = false) {
+    const payload: TokenPayload = { userId, isSecondFactorAuthenticated };
+    const token = this.jwtService.sign(payload, {
+      secret: this.configService.get('JWT_ACCESS_TOKEN_SECRET'),
+      expiresIn: `${this.configService.get('JWT_ACCESS_TOKEN_EXPIRATION_TIME')}s`
+    });
+    return `Authentication=${token}; HttpOnly; Path=/; Max-Age=${this.configService.get('JWT_ACCESS_TOKEN_EXPIRATION_TIME')}`;
   }
 }
