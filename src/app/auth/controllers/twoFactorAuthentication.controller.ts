@@ -34,15 +34,16 @@ export class TwoFactorAuthenticationController {
     @UseGuards(JwtAuthenticationGuard)
     async turnOnTwoFactorAuthentication(
         @Req() request: RequestWithUser,
-        @Body() { twoFactorAuthenticationCode } : any
+        @Body() { code } : any
     ) {
         const isCodeValid = this.twoFactorAuthenticationService.isTwoFactorAuthenticationCodeValid(
-            twoFactorAuthenticationCode, request.user
+            code, request.user
         );
         if (!isCodeValid) {
             throw new UnauthorizedException('Wrong authentication code');
         }
         await this.authService.turnOnTwoFactorAuthentication(request.user.id);
+        return {msg: 'turned on'}
     }
 
     @Post('authenticate')
@@ -61,7 +62,6 @@ export class TwoFactorAuthenticationController {
 
         const accessTokenCookie = this.authService.getCookieWithJwtAccessToken(request.user.id, true);
 
-        request.res.setHeader('Set-Cookie', [accessTokenCookie]);
 
         return request.user;
     }

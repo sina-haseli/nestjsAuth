@@ -18,12 +18,17 @@ export class AuthController {
   @Get()
   @UseGuards(AuthGuard('google'))
   async googleAuth(@Req() req) {
-    return req.user;
+    return
   }
 
   @Get('redirect')
   @UseGuards(AuthGuard('google'))
   async googleAuthRedirect(@Req() req) {
+    // TODO get google info
+    // TODO create or find user by given info
+    // TODO create a new jwt token and refresh token for user
+    // return those tokens
+
     return this.authService.googleLogin(req);
   }
 

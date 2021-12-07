@@ -1,96 +1,3 @@
-// import {
-//   HttpException,
-//   HttpStatus,
-//   Inject,
-//   Injectable,
-//   UnauthorizedException,
-// } from '@nestjs/common';
-// import * as bcrypt from 'bcryptjs';
-// import { UserRepository } from '../../user/repositories/user.repository';
-// import { AuthenticationDto } from '../dto/requests/authentication.dto';
-// import { JwtService } from '@nestjs/jwt';
-// import { User } from '../../user/entities/user.entity';
-// import { BusinessService } from '../../base/business.service';
-// import { ConsentRegistry } from '../consentregistry.interface';
-// import { ForgottenPassword } from '../forgottenpassword.interface';
-// import { EmailVerificationInterface } from '../emailVerification.interface';
-// import { CreateUser } from '../../user/dto/requests/create-user.dto';
-// import UserAdminResponseDto from '../../user/dto/responses/admin-user-responses.dto';
-// import { JWTService } from './jwt.service';
-//
-// @Injectable()
-// export class AuthService extends BusinessService<User> {
-//   constructor(
-//     private jwtService: JwtService,
-//     private jwtServices: JWTService,
-//     private userRepo: UserRepository,
-//     @Inject('EmailVerification')
-//     private readonly emailVerificationModel: EmailVerificationInterface,
-//     @Inject('ForgottenPassword')
-//     private readonly forgottenPasswordModel: ForgottenPassword,
-//     @Inject('ConsentRegistry')
-//     private readonly consentRegistryModel: ConsentRegistry,
-//   ) {
-//     super(userRepo);
-//   }
-//
-//   async validateLogin(email, password) {
-//     const userFromDb = await this.userRepo.findOne({ email: email });
-//     if (!userFromDb)
-//       throw new HttpException('LOGIN.USER_NOT_FOUND', HttpStatus.NOT_FOUND);
-//     if (!userFromDb.email)
-//       throw new HttpException('LOGIN.EMAIL_NOT_VERIFIED', HttpStatus.FORBIDDEN);
-//
-//     const isValidPass = await bcrypt.compare(password, userFromDb.password);
-//
-//     if (isValidPass) {
-//       const accessToken = await this.jwtServices.createToken(email, null);
-//       return { token: accessToken, user: new UserAdminResponseDto(userFromDb) };
-//     } else {
-//       throw new HttpException('LOGIN.ERROR', HttpStatus.UNAUTHORIZED);
-//     }
-//   }
-//
-//   async authUserByEmail(authDto: AuthenticationDto): Promise<void> {
-//     const { email, password } = authDto;
-//     const user = await this.userRepo.findOne({
-//       where: { email },
-//     });
-//     if (!user) {
-//       throw new UnauthorizedException('کاربری با این email ثبت نشده است ');
-//     }
-//     if (user.password !== password) {
-//       throw new UnauthorizedException('wrong password');
-//     }
-//     return;
-//   }
-//
-//   async createEmailToken(email: string): Promise<boolean> {
-//     const emailVerification = await this.emailVerificationModel.findOne({email: email});
-//     if (emailVerification && ( (new Date().getTime() - emailVerification.timestamp.getTime()) / 60000 < 15 )){
-//       throw new HttpException(
-//         'LOGIN.EMAIL_SENDED_RECENTLY',
-//         HttpStatus.INTERNAL_SERVER_ERROR,
-//       );
-//     } else {
-//       var emailVerificationModel = await this.emailVerificationModel.findOneAndUpdate(
-//         {email: email},
-//         {
-//           email: email,
-//           emailToken: (Math.floor(Math.random() * (9000000)) + 1000000).toString(), //Generate 7 digits number
-//           timestamp: new Date()
-//         },
-//         {upsert: true}
-//       );
-//       return true;
-//     }
-//   }
-//
-//
-//   async whoAmI(user: User) {
-//     return this.findOne(user.id, 'role');
-//   }
-// }
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -103,6 +10,7 @@ import { ForgotPassword } from '../entities/forgottenpassword.entity';
 import { User } from '../../user/entities/user.entity';
 import { BusinessService } from '../../base/business.service';
 import { UserRepository } from '../../user/repositories/user.repository';
+import RegisterDto from "../dto/requests/register.dto";
 const {
   SMTP_HOST,
   SMTP_PORT,
@@ -188,7 +96,6 @@ export class AuthService extends BusinessService<User> {
       return 'No user from google';
     }
 
-    const randomPassword = Math.random().toString(36).slice(-8);
     let result;
 
     const user = await this.findByEmail(req.user.email);
@@ -198,14 +105,13 @@ export class AuthService extends BusinessService<User> {
         result.id,
         {
           avatar: req.user.picture,
-          password: randomPassword,
         },
         null,
       );
     } else {
       result = await this.usersService.save({
         email: req.user.email,
-        password: randomPassword,
+        password: null,
         firstName: req.user.firstName,
         lastName: req.user.lastName,
         avatar: req.user.picture,
@@ -213,11 +119,7 @@ export class AuthService extends BusinessService<User> {
       });
     }
 
-    return {
-      message: 'User information from google',
-      user: req.user,
-      userCreated: result,
-    };
+    return this.login(result)
   }
 
   async validateUser(email: string, password: string): Promise<any> {
@@ -490,5 +392,58 @@ export class AuthService extends BusinessService<User> {
       expiresIn: 'JWT_ACCESS_TOKEN_EXPIRATION_TIME'
     });
     return `Authentication=${token}; HttpOnly; Path=/; Max-Age='JWT_ACCESS_TOKEN_EXPIRATION_TIME'`;
+  }
+
+  // ----------------------------------------------------------------------------------------------------------
+
+
+  async getAuthenticatedUser(email: string, hashedPassword: string) {
+    try {
+      const user = await this.findByEmail(email);
+      const isPasswordMatching = await bcrypt.compare(
+          hashedPassword,
+          user.password
+      );
+      if (!isPasswordMatching) {
+        throw new HttpException('Wrong credentials provided', HttpStatus.BAD_REQUEST);
+      }
+      user.password = undefined;
+      return user;
+    } catch (error) {
+      throw new HttpException('Wrong credentials provided', HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  async verifyPassword(plainTextPassword: string, hashedPassword: string) {
+    const isPasswordMatching = await bcrypt.compare(
+        plainTextPassword,
+        hashedPassword
+    );
+    if (!isPasswordMatching) {
+      throw new HttpException('Wrong credentials provided', HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  async getCookieWithJwtToken(userId: number) {
+    const payload: TokenPayload = { userId, isSecondFactorAuthenticated: false };
+    const token = this.jwtService.sign(payload);
+    return `Authentication=${token}; HttpOnly; Path=/; Max-Age='JWT_EXPIRATION_TIME'`;
+  }
+
+  async register(registrationData: RegisterDto) {
+    const hashedPassword = await bcrypt.hash(registrationData.password, 10);
+    try {
+      const createdUser = await this.usersService.save({
+        ...registrationData,
+        password: hashedPassword
+      });
+      createdUser.password = undefined;
+      return createdUser;
+    } catch (error) {
+      if (error?.code === PostgresErrorCode.UniqueViolation) {
+        throw new HttpException('User with that email already exists', HttpStatus.BAD_REQUEST);
+      }
+      throw new HttpException('Something went wrong', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 }

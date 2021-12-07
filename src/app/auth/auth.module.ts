@@ -1,4 +1,4 @@
-import {forwardRef, Module} from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { AuthController } from './controllers/auth.controller';
 import { PassportModule } from '@nestjs/passport';
 import { jwtSecret } from '../../config/jwt-secret';
@@ -11,15 +11,15 @@ import { ForgotPassword } from './entities/forgottenpassword.entity';
 import { EmailVerification } from './entities/emailverification.entity';
 import { LocalStrategy } from './jwt-local.strategy';
 import { GoogleStrategy } from './google.strategy';
-import {UserModule} from "../user/user.module";
-import {TwoFactorAuthenticationController} from "./controllers/twoFactorAuthentication.controller";
-import {TwoFactorAuthenticationService} from "./services/twoFactorAuthentication.service";
+import { UserModule } from '../user/user.module';
+import { TwoFactorAuthenticationController } from './controllers/twoFactorAuthentication.controller';
+import { TwoFactorAuthenticationService } from './services/twoFactorAuthentication.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([ForgotPassword]),
-    TypeOrmModule.forFeature([EmailVerification]),
+    TypeOrmModule.forFeature([ForgotPassword, EmailVerification]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
+    PassportModule,
     JwtModule.register({
       secret: jwtSecret,
       signOptions: {
@@ -28,7 +28,6 @@ import {TwoFactorAuthenticationService} from "./services/twoFactorAuthentication
     }),
     TypeOrmModule.forFeature([UserRepository]),
     forwardRef(() => UserModule),
-
   ],
   controllers: [AuthController, TwoFactorAuthenticationController],
   providers: [
