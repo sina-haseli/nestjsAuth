@@ -91,7 +91,7 @@
 //     return this.findOne(user.id, 'role');
 //   }
 // }
-import {Injectable, HttpException, HttpStatus} from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { EmailVerification } from '../entities/emailverification.entity';
@@ -101,8 +101,8 @@ import * as nodemailer from 'nodemailer';
 import * as smtpTransport from 'nodemailer-smtp-transport';
 import { ForgotPassword } from '../entities/forgottenpassword.entity';
 import { User } from '../../user/entities/user.entity';
-import {BusinessService} from "../../base/business.service";
-import {UserRepository} from "../../user/repositories/user.repository";
+import { BusinessService } from '../../base/business.service';
+import { UserRepository } from '../../user/repositories/user.repository';
 const {
   SMTP_HOST,
   SMTP_PORT,
@@ -140,7 +140,7 @@ export class AuthService extends BusinessService<User> {
 
   async turnOnTwoFactorAuthentication(userId: number) {
     return this.usersService.update(userId, {
-      isTwoFactorAuthenticationEnabled: true
+      isTwoFactorAuthenticationEnabled: true,
     });
   }
 
@@ -188,9 +188,35 @@ export class AuthService extends BusinessService<User> {
       return 'No user from google';
     }
 
+    const randomPassword = Math.random().toString(36).slice(-8);
+    let result;
+
+    const user = await this.findByEmail(req.user.email);
+    if (user) {
+      result = await this.findByEmail(req.user.email);
+      await this.updateById(
+        result.id,
+        {
+          avatar: req.user.picture,
+          password: randomPassword,
+        },
+        null,
+      );
+    } else {
+      result = await this.usersService.save({
+        email: req.user.email,
+        password: randomPassword,
+        firstName: req.user.firstName,
+        lastName: req.user.lastName,
+        avatar: req.user.picture,
+        isTwoFactorAuthenticationEnabled: false,
+      });
+    }
+
     return {
       message: 'User information from google',
       user: req.user,
+      userCreated: result,
     };
   }
 
@@ -277,9 +303,7 @@ export class AuthService extends BusinessService<User> {
       where: { token: token },
     });
     if (emailVerification && emailVerification.email) {
-      const userData = await this.findByEmail(
-        emailVerification.email,
-      );
+      const userData = await this.findByEmail(emailVerification.email);
       if (userData) {
         userData.is_verified = true;
         const savedUser = await this.usersService.save(userData, null);
@@ -460,11 +484,11 @@ export class AuthService extends BusinessService<User> {
   }
 
   getCookieWithJwtAccessToken(userId: number, isSecondFactorAuthenticated = false) {
-    const payload: TokenPayload = { userId, isSecondFactorAuthenticated };
+    const payload: any = { userId, isSecondFactorAuthenticated };
     const token = this.jwtService.sign(payload, {
-      secret: this.configService.get('JWT_ACCESS_TOKEN_SECRET'),
-      expiresIn: `${this.configService.get('JWT_ACCESS_TOKEN_EXPIRATION_TIME')}s`
+      secret: 'JWT_ACCESS_TOKEN_SECRET',
+      expiresIn: 'JWT_ACCESS_TOKEN_EXPIRATION_TIME'
     });
-    return `Authentication=${token}; HttpOnly; Path=/; Max-Age=${this.configService.get('JWT_ACCESS_TOKEN_EXPIRATION_TIME')}`;
+    return `Authentication=${token}; HttpOnly; Path=/; Max-Age='JWT_ACCESS_TOKEN_EXPIRATION_TIME'`;
   }
 }

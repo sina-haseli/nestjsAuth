@@ -34,6 +34,7 @@
     "bcryptjs": "^2.4.3",
     "class-transformer": "^0.3.2",
     "class-validator": "^0.13.2",
+    "googleapis": "^92.0.0",
     "jwks-rsa": "^2.0.5",
     "lodash": "^4.17.21",
     "nodemailer": "^6.7.2",

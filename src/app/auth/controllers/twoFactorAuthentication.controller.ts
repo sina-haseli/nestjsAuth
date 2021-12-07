@@ -1,7 +1,5 @@
 import {
     ClassSerializerInterceptor,
-    Controller,
-    Header,
     Post,
     UseInterceptors,
     Res,
@@ -10,11 +8,12 @@ import {
 } from '@nestjs/common';
 import { TwoFactorAuthenticationService } from '../services/twoFactorAuthentication.service';
 import { Response } from 'express';
-import JwtAuthenticationGuard from '../jwt-authentication.guard';
-import RequestWithUser from '../requestWithUser.interface';
 import {AuthService} from "../services/auth.service";
+import RequestWithUser from "../interfaces/requestWithUser.interface";
+import JwtAuthenticationGuard from "../jwt-authentication.guard";
+import {BusinessController} from "../../common/decorator/business-controller.decorator";
 
-@Controller('2fa')
+@BusinessController('/2fa', '2FA')
 @UseInterceptors(ClassSerializerInterceptor)
 export class TwoFactorAuthenticationController {
     constructor(
@@ -35,7 +34,7 @@ export class TwoFactorAuthenticationController {
     @UseGuards(JwtAuthenticationGuard)
     async turnOnTwoFactorAuthentication(
         @Req() request: RequestWithUser,
-        @Body() { twoFactorAuthenticationCode } : TwoFactorAuthenticationCodeDto
+        @Body() { twoFactorAuthenticationCode } : any
     ) {
         const isCodeValid = this.twoFactorAuthenticationService.isTwoFactorAuthenticationCodeValid(
             twoFactorAuthenticationCode, request.user
@@ -51,7 +50,7 @@ export class TwoFactorAuthenticationController {
     @UseGuards(JwtAuthenticationGuard)
     async authenticate(
         @Req() request: RequestWithUser,
-        @Body() { twoFactorAuthenticationCode } : TwoFactorAuthenticationCodeDto
+        @Body() { twoFactorAuthenticationCode } : any
     ) {
         const isCodeValid = this.twoFactorAuthenticationService.isTwoFactorAuthenticationCodeValid(
             twoFactorAuthenticationCode, request.user

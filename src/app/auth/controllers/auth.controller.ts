@@ -9,24 +9,11 @@ import {CreateUser} from '../../user/dto/requests/create-user.dto';
 import * as bcrypt from 'bcrypt';
 import {ManagementClient} from 'auth0';
 
-@BusinessController('/auth', 'Authentication')
+@BusinessController('/google', 'Authentication')
 export class AuthController {
   constructor(
     private authService: AuthService,
   ) {}
-
-  // @HttpCode(200)
-  // @Post('/authentication-user')
-  // async authUser(@Body() authenticationDto: AuthenticationDto) {
-  //   await this.authService.authUserByEmail(authenticationDto);
-  //   return new LoginNumberResponse();
-  // }
-  //
-  // @Get('/who-am-i')
-  // async whoAmI(@GetUser() user: User) {
-  //   const result = await this.authService.whoAmI(user);
-  //   return new BaseCustomerUserResponseDto(result);
-  // }
 
   @Get()
   @UseGuards(AuthGuard('google'))
@@ -36,7 +23,7 @@ export class AuthController {
 
   @Get('redirect')
   @UseGuards(AuthGuard('google'))
-  googleAuthRedirect(@Req() req) {
+  async googleAuthRedirect(@Req() req) {
     return this.authService.googleLogin(req);
   }
 

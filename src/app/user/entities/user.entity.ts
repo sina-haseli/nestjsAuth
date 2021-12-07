@@ -26,7 +26,7 @@ export class User {
   hashPassword() {
     this.password = bcrypt.hashSync(this.password, bcrypt.genSaltSync(8), null);
   }
-  @Column()
+  @Column({ nullable: true })
   @IsNotEmpty()
   @ApiHideProperty()
   password: string;

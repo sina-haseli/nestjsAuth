@@ -12,6 +12,8 @@ import { EmailVerification } from './entities/emailverification.entity';
 import { LocalStrategy } from './jwt-local.strategy';
 import { GoogleStrategy } from './google.strategy';
 import {UserModule} from "../user/user.module";
+import {TwoFactorAuthenticationController} from "./controllers/twoFactorAuthentication.controller";
+import {TwoFactorAuthenticationService} from "./services/twoFactorAuthentication.service";
 
 @Module({
   imports: [
@@ -28,18 +30,20 @@ import {UserModule} from "../user/user.module";
     forwardRef(() => UserModule),
 
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, TwoFactorAuthenticationController],
   providers: [
     JwtStrategy,
     AuthService,
     LocalStrategy,
     GoogleStrategy,
+    TwoFactorAuthenticationService,
   ],
   exports: [
     JwtStrategy,
     PassportModule,
     AuthService,
     LocalStrategy,
+    TwoFactorAuthenticationService,
   ],
 })
 export class AuthModule {}

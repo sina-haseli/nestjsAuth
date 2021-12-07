@@ -39,6 +39,11 @@ export class UserController {
     return await this.userService.getOneOrFail(id);
   }
 
+  @Get()
+  async findAll() {
+    return await this.userService.findAll();
+  }
+
   @Delete(':id')
   async deleteUser(
     @Param('id', ParseIntPipe) id: number,
